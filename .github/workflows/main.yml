@@ -11,11 +11,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg python3-pip
-          pip install gdown
+          pip install --upgrade gdown
 
       - name: Download Video from Drive
         run: |
-          gdown 'https://drive.google.com/uc?export=download&id=16Sl-wOplNoJVMRTEhls2yA1iN-fzu-pN&confirm=$(curl -s -c cookies.txt 'https://drive.google.com/uc?export=download&id=1M11BJEjVaI1UbInyNIVF1qSavG5V' -O input.mp4
+          gdown 'https://drive.google.com/uc?export=download&id=16Sl-wOplNoJVMRTEhls2yA1iN-fzu-pN' -O input.mp4
 
       - name: Start Live Stream (Original Quality - No Filter)
         env:
