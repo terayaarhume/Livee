@@ -1,4 +1,3 @@
-
 name: YouTube Live Stream Loop
 
 on:
@@ -8,30 +7,28 @@ jobs:
   stream:
     runs-on: ubuntu-latest
     steps:
-      - name: Install FFmpeg
+      - name: Install FFmpeg & gdown
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg python3-pip
+          pip install gdown
 
       - name: Download Video from Drive
         run: |
-          curl -L -c cookies.txt "https://drive.google.com/uc?export=download&id=16Sl-wOplNoJVMRTEhls2yA1iN-fzu-pN&confirm=$(curl -s -c cookies.txt 'https://drive.google.com/uc?export=download&id=1M11BJEjVaI1UbInyNIVF1qSavG5V' | grep -o 'confirm=[^&]*' | cut -d= -f2)" -o video.mp4
+          gdown 'https://drive.google.com/uc?export=download&id=16Sl-wOplNoJVMRTEhls2yA1iN-fzu-pN&confirm=$(curl -s -c cookies.txt 'https://drive.google.com/uc?export=download&id=1M11BJEjVaI1UbInyNIVF1qSavG5V' -O input.mp4
 
-      - name: Start Live Stream
+      - name: Start Live Stream with Audio Fix
         env:
           STREAM_KEY: ${{ secrets.STREAM_KEY }}
         run: |
-          timeout 21000 ffmpeg -re -stream_loop -1 -err_detect ignore_err -i video.mp4 \
-          -c:v libx264 -preset ultrafast -b:v 3000k -maxrate 3000k -bufsize 6000k \
-          -pix_fmt yuv420p -g 50 -c:a aac -b:a 128k -ar 44100 \
+          timeout 21000 ffmpeg -re -stream_loop -1 -i input.mp4 \
+          -c:v copy \
+          -af "highpass=f=120,equalizer=f=100:width_type=h:width=80:g=-12,equalizer=f=250:width_type=h:width=120:g=-6,equalizer=f=2500:width_type=h:width=1000:g=4,acompressor=threshold=-18dB:ratio=4:attack=5:release=50,alimiter=limit=0.8,volume=0.8" \
+          -c:a aac -b:a 256k \
           -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY" || true
 
       - name: Trigger Next Workflow Run Automatically
         env:
-          GH_PAT: ${{ secrets.PAT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
-          curl -X POST \
-            -H "Authorization: token $GH_PAT" \
-            -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/${{ github.repository }}/actions/workflows/stream.yml/dispatches \
-            -d '{"ref":"main"}'
+          gh workflow run main.yml -R ${{ github.repository }}
