@@ -1,4 +1,4 @@
-name: YouTube Live Stream 2
+name: YouTube Live Stream Loop
 
 on:
   workflow_dispatch:
@@ -13,26 +13,21 @@ jobs:
           sudo apt-get install -y ffmpeg python3-pip
           pip install gdown
 
-      - name: Download Second Video from Drive
+      - name: Download Video from Drive
         run: |
-          gdown 'https://drive.google.com/uc?export=download&id=16Sl-wOplNoJVMRTEhls2yA1iN-fzu-pN&confirm=$(curl -s -c cookies.txt 'https://drive.google.com/uc?export=download&id=1M11BJEjVaI1UbInyNIVF1qSavG5V' -O input2.mp4
+          gdown 'https://drive.google.com/uc?export=download&id=16Sl-wOplNoJVMRTEhls2yA1iN-fzu-pN&confirm=$(curl -s -c cookies.txt 'https://drive.google.com/uc?export=download&id=1M11BJEjVaI1UbInyNIVF1qSavG5V' -O input.mp4
 
-      - name: Start Live Stream 2
+      - name: Start Live Stream (Original Quality - No Filter)
         env:
-          STREAM_KEY: ${{ secrets.STREAM_KEY_2 }}
+          STREAM_KEY: ${{ secrets.STREAM_KEY }}
         run: |
-          timeout 21000 ffmpeg -re -stream_loop -1 -i input2.mp4 \
+          timeout 21000 ffmpeg -re -stream_loop -1 -i input.mp4 \
           -c:v copy \
-          -af "highpass=f=120,equalizer=f=100:width_type=h:width=80:g=-12,equalizer=f=250:width_type=h:width=120:g=-6,equalizer=f=2500:width_type=h:width=1000:g=4,acompressor=threshold=-18dB:ratio=4:attack=5:release=50,alimiter=limit=0.8,volume=0.8" \
-          -c:a aac -b:a 256k \
+          -c:a copy \
           -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY" || true
 
-      - name: Trigger Next Run Automatically
+      - name: Trigger Next Workflow Run Automatically
         env:
-          GH_PAT: ${{ secrets.PAT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
-          curl -X POST \
-            -H "Authorization: token $GH_PAT" \
-            -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/${{ github.repository }}/actions/workflows/stream2.yml/dispatches \
-            -d '{"ref":"main"}'
+          gh workflow run main.yml -R ${{ github.repository }}
